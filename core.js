@@ -131,7 +131,7 @@ const getFlyLineMesh = (arcInfo) => {
     false, // aClockwise
     0 // aRotation
   );
-  const flyPoints = flyCurve.getPoints(16);
+  const flyPoints = flyCurve.getPoints(24);
   const flyGeometry = new THREE.BufferGeometry().setFromPoints(flyPoints);
   const flyMaterial = new THREE.PointsMaterial({
     vertexColors: true,
@@ -206,14 +206,14 @@ const getEarth = (earthSize) => {
   // 地球贴图
   const textureLoader = new THREE.TextureLoader();
   const texture = textureLoader.load(
-    './assets/earth.jpg'
+    './assets/world.png'
     // './assets/earth.jpg'
   );
   // 球
   const geometry = new THREE.SphereGeometry(coreRadius, 32, 32);
   const material = new THREE.MeshBasicMaterial({
-    // map: texture,
-    color: 0x000000,
+    map: texture,
+    // color: 0x005959,
   });
   const sphere = new THREE.Mesh(geometry, material);
 
@@ -222,7 +222,7 @@ const getEarth = (earthSize) => {
     const json = JSON.parse(data);
 
     // console.log('json.features', );
-    json.features.forEach(feature => {
+    const featurePoints = json.features.reduce((pv, feature) => {
       const geometry = feature.geometry;
       let coordinates = [];
       if (geometry.type === 'Polygon') {
@@ -232,22 +232,33 @@ const getEarth = (earthSize) => {
         // -
         coordinates = geometry.coordinates;
       }
-      coordinates.forEach(polygons => {
-        polygons.forEach(polygon => {
-          const points = polygon.map((point) => {
+      const rootPoints = coordinates.reduce((rootPv, polygons) => {
+        const points = polygons.reduce((pv, polygon) => {
+          const points = polygon.reduce((pv, point) => {
             // // 经纬度转2d坐标
-            const [x, y] = [point[0], point[1]];
+            const [x, y] = point;
             const v3 = latLonToVector3(x, y, coreRadius);
-            return v3;
-          });
-          const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
-          const lineMaterial = new THREE.LineBasicMaterial({ color: 0xff0000, });
-          const line = new THREE.LineLoop(lineGeometry, lineMaterial);
+            const list = [pv[pv.length - 1], v3];
+            if (pv.length <= 1) {
+              list.shift();
+            }
+            return pv.concat(list);
+          }, []);
+          // points.push(points[0]);
+          return pv.concat(points);
+        }, []);
 
-          sphere.add(line);
-        });
-      });
-    });
+        return rootPv.concat(points);
+      }, []);
+      return pv.concat(rootPoints);
+    }, []);
+
+
+    const lineGeometry = new THREE.BufferGeometry().setFromPoints(featurePoints);
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 1 });
+    const line = new THREE.LineSegments(lineGeometry, lineMaterial);
+
+    sphere.add(line);
   });
 
   // 球体光晕
@@ -288,7 +299,6 @@ const getBackground = (redis) => {
   // 创建精灵
   const spriteMaterial = new THREE.SpriteMaterial({
     map: texture,
-    color: 0xffffff,
     transparent: true,
   });
   const sprite = new THREE.Sprite(spriteMaterial);
@@ -303,7 +313,7 @@ const getBackground = (redis) => {
  */
 export default (scene) => {
 
-  const earthSize = 98;
+  const earthSize = 100;
 
   // 背景
   const bg = getBackground(earthSize);
@@ -362,7 +372,7 @@ export default (scene) => {
   // cone.position.applyQuaternion(sceneQ);
   cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), locationPosition.clone().normalize());
 
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 20; i++) {
     const p1 = createPoint(0.3, 0x0000ff);
     const p2 = createPoint(0.3, 0xffff00);
 
@@ -389,6 +399,8 @@ export default (scene) => {
     scene.add(p1);
     scene.add(p2);
 
+    // 两点长度
+    const distance = p1.position.distanceTo(p2.position);
     // 核心
     const arcInfo = genArcInfo(p1.position, p2.position);
     const arcMesh = getArcMesh(arcInfo);
@@ -399,7 +411,7 @@ export default (scene) => {
 
 
     // -
-
+    // console.log('distance', );
 
     // TWEEN start=originQuaternion end=qqq  loop
     const tween = new TWEEN.Tween(flyEllipse.rotation)
@@ -407,7 +419,7 @@ export default (scene) => {
         {
           z: arcInfo.endAngle - arcInfo.startAngle + flyEllipse.rotation.z,
         },
-        2000
+        1000 * (distance / earthSize)
       )
       .easing(TWEEN.Easing.Linear.None)
       .delay(100)

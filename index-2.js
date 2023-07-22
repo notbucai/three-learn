@@ -70,8 +70,8 @@ window.addEventListener('load', init);
 function init () {
 
   renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, });
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(4096, 4096 / 2);
+  // renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(1024, 1024 / 2);
   container.appendChild(renderer.domElement);
 
   stats = new Stats();
@@ -80,15 +80,15 @@ function init () {
   scene = new THREE.Scene();
 
   camera = new THREE.PerspectiveCamera(45, 2 / 1, 1, 3000);
-  // camera.position.z = 217.5;
   camera.position.z = 217.5;
+  // camera.position.z = 267.5;
   // camera.position.y = -26;
   // 45度
 
   camera.target = new THREE.Vector3();
 
   var controls = new OrbitControls(camera, renderer.domElement);
-  controls.minDistance = 50;
+  controls.minDistance = 5;
   controls.maxDistance = 10000;
 
   // scene.add(new THREE.AmbientLight(0x443333));
@@ -146,8 +146,8 @@ function init () {
 
 function onWindowResize () {
 
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
+  // camera.aspect = window.innerWidth / window.innerHeight;
+  // camera.updateProjectionMatrix();
 
   // renderer.setSize(window.innerWidth, window.innerHeight);
 
