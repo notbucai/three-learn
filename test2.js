@@ -31,7 +31,7 @@ export default (scene) => {
           });
           const shape = new THREE.Shape(points);
           const geometry = new THREE.ShapeGeometry(shape);
-          const material = new THREE.MeshBasicMaterial({ color: 0x100000 });
+          const material = new THREE.MeshBasicMaterial({ color: 0x080a28 });
           const mesh = new THREE.Mesh(geometry, material);
           scene.add(mesh);
 

@@ -104,7 +104,7 @@ const getArcMesh = (arcInfo) => {
   const points = curve.getPoints(30);
   const _geometry = new THREE.BufferGeometry().setFromPoints(points);
   const _material = new THREE.LineBasicMaterial({
-    color: 0xffffff,
+    color: 0x00ffff,
   });
   const ellipse = new THREE.Line(_geometry, _material);
 
@@ -147,9 +147,9 @@ const getFlyLineMesh = (arcInfo) => {
   const flyColors = [];
   const flyPercents = [];
   for (let i = 0; i < flyPoints.length; i++) {
-    flyPercents.push(i / flyPoints.length);
+    flyPercents.push(i / flyPoints.length + 0.6);
     // 0 - 1 : 0 - 255
-    flyColors.push(1, 1, 0, i / flyPoints.length);
+    flyColors.push(0x00, 0xff, 0xff, i / flyPoints.length);
   }
   flyGeometry.setAttribute(
     "color",
@@ -255,16 +255,16 @@ const getEarth = (earthSize) => {
 
 
     const lineGeometry = new THREE.BufferGeometry().setFromPoints(featurePoints);
-    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 1 });
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x81f2e1, linewidth: 1 });
     const line = new THREE.LineSegments(lineGeometry, lineMaterial);
 
     sphere.add(line);
   });
 
   // 球体光晕
-  const glowGeometry = new THREE.SphereGeometry(coreRadius + 1, 32, 32);
+  const glowGeometry = new THREE.SphereGeometry(coreRadius + 1, 64, 64);
   const glowMaterial = new THREE.MeshBasicMaterial({
-    color: 0xff0000,
+    color: 0x81f2e1,
     side: THREE.BackSide,
     transparent: true,
     opacity: 0.2,
@@ -308,6 +308,39 @@ const getBackground = (redis) => {
 
 }
 
+const getShowPoint = (position) => {
+  const group = new THREE.Group();
+  group.position.copy(position);
+  group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), position.clone().normalize());
+
+  // 创建外环
+  const outRingGeometry = new THREE.RingGeometry(0.55, 0.65, 32);
+  const outRingMaterial = new THREE.MeshBasicMaterial({
+    color: 0x81f2e1,
+    side: THREE.DoubleSide,
+  });
+  const outRing = new THREE.Mesh(outRingGeometry, outRingMaterial);
+  // 旋转角度
+  outRing.rotation.x = Math.PI / 2;
+  group.add(outRing);
+  // 内圆面
+  const innerCircleGeometry = new THREE.CircleGeometry(0.4, 32);
+  const innerCircleMaterial = new THREE.MeshBasicMaterial({
+    color: 0x81f2e1,
+    side: THREE.DoubleSide,
+  });
+  const innerCircle = new THREE.Mesh(innerCircleGeometry, innerCircleMaterial);
+  innerCircle.rotation.x = Math.PI / 2;
+  group.add(innerCircle);
+
+  return group;
+}
+
+const getShowPointByLonLat = (lon, lat, r) => {
+  const position = latLonToVector3(lon, lat, r);
+  return getShowPoint(position);
+}
+
 /**
  * @param {THREE.Scene} scene
  */
@@ -328,54 +361,10 @@ export default (scene) => {
   const currentLon = 119;
   const currentLat = 29;
 
-  const locationPosition = latLonToVector3(currentLon, currentLat, earthSize)
-
-
-  // 创建点
-  const locationMesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.2, 32, 32),
-    new THREE.MeshBasicMaterial({
-      color: 0xff0000,
-    })
-  );
-  locationMesh.position.copy(locationPosition);
-
-  scene.add(locationMesh);
-
-  // 创建平面
-  const sG = new THREE.CircleGeometry(1, 32);
-  const sM = new THREE.MeshBasicMaterial({
-    color: 0x00ff00,
-    side: THREE.DoubleSide,
-  });
-  const s = new THREE.Mesh(sG, sM);
-  s.position.copy(locationPosition);
-  // s.position.z = 0;
-  s.lookAt(0, 0, 0);
-  scene.add(s);
-
-  // 圆锥体
-  const coneGeometry = new THREE.ConeGeometry(0.5, 5, 32);
-  const coneMaterial = new THREE.MeshBasicMaterial({
-    color: 0xff00ff,
-  });
-  const cone = new THREE.Mesh(coneGeometry, coneMaterial);
-  cone.position.copy(locationPosition);
-  // cone.lookAt(0, 0, 0);
-  scene.add(cone);
-
-  cone.add(new THREE.AxesHelper(5));
-
-  // 
-  // const sceneQ = new THREE.Quaternion().setFromUnitVectors( new THREE.Vector3(0, 0, 1), locationPosition.clone().normalize());
-  // cone.applyQuaternion(sceneQ);
-  // cone.position.applyQuaternion(sceneQ);
-  cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), locationPosition.clone().normalize());
+  const cPoint = getShowPointByLonLat(currentLon, currentLat, earthSize);
+  scene.add(cPoint);
 
   for (let i = 0; i < 20; i++) {
-    const p1 = createPoint(0.3, 0x0000ff);
-    const p2 = createPoint(0.3, 0xffff00);
-
     // 随机放在球面上 xyz
     // 随机一个向量
     const randomPoint1 = new THREE.Vector3(
@@ -385,7 +374,6 @@ export default (scene) => {
     );
     // 乘以半径
     randomPoint1.normalize().multiplyScalar(earthSize);
-    p1.position.copy(randomPoint1);
 
     const randomPoint2 = new THREE.Vector3(
       Math.random() - 0.5,
@@ -394,7 +382,10 @@ export default (scene) => {
     );
     // 乘以半径
     randomPoint2.normalize().multiplyScalar(earthSize);
-    p2.position.copy(randomPoint2);
+
+    const p1 = getShowPoint(randomPoint1);
+    const p2 = getShowPoint(randomPoint2);
+
 
     scene.add(p1);
     scene.add(p2);
