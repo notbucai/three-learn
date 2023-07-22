@@ -308,13 +308,15 @@ const getBackground = (redis) => {
 
 }
 
-const getShowPoint = (position) => {
+const getShowPoint = (position, size = 0.5) => {
+  const gapSize = size * 0.2;
+
   const group = new THREE.Group();
   group.position.copy(position);
   group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), position.clone().normalize());
 
   // 创建外环
-  const outRingGeometry = new THREE.RingGeometry(0.55, 0.65, 32);
+  const outRingGeometry = new THREE.RingGeometry(size - gapSize, size, 20);
   const outRingMaterial = new THREE.MeshBasicMaterial({
     color: 0x81f2e1,
     side: THREE.DoubleSide,
@@ -324,7 +326,7 @@ const getShowPoint = (position) => {
   outRing.rotation.x = Math.PI / 2;
   group.add(outRing);
   // 内圆面
-  const innerCircleGeometry = new THREE.CircleGeometry(0.4, 32);
+  const innerCircleGeometry = new THREE.CircleGeometry(size - gapSize * 2, 20);
   const innerCircleMaterial = new THREE.MeshBasicMaterial({
     color: 0x81f2e1,
     side: THREE.DoubleSide,
@@ -333,12 +335,49 @@ const getShowPoint = (position) => {
   innerCircle.rotation.x = Math.PI / 2;
   group.add(innerCircle);
 
+  const rippleRingList = [];
+  for (let i = 0; i < 3; i++) {
+    // 涟漪
+    const rippleRingGeometry = new THREE.RingGeometry(size + (gapSize * i) , size + gapSize * i * 1.4, 20);
+    const rippleRingMaterial = new THREE.MeshBasicMaterial({
+      color: 0x81f2e1,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.8,
+    });
+    const rippleRing = new THREE.Mesh(rippleRingGeometry, rippleRingMaterial);
+    rippleRing.rotation.x = Math.PI / 2;
+
+    rippleRingList.push(rippleRing);
+  }
+
+  // 旋转角度
+  group.add(...rippleRingList);
+
+  new TWEEN.Tween({
+    scale: 1,
+    opacity: 0.8,
+  }).to({
+    scale: 2,
+    opacity: 0,
+  })
+    .onUpdate((obj) => {
+      rippleRingList.forEach((rippleRing, index) => {
+        rippleRing.scale.setScalar(obj.scale - index * 0.1);
+        rippleRing.material.opacity = obj.opacity - index * 0.1;
+      });
+    })
+    .delay(100)
+    .duration(1000)
+    .repeat(Infinity)
+    .start();
+
   return group;
 }
 
-const getShowPointByLonLat = (lon, lat, r) => {
+const getShowPointByLonLat = (lon, lat, r, size = 0.5) => {
   const position = latLonToVector3(lon, lat, r);
-  return getShowPoint(position);
+  return getShowPoint(position, size);
 }
 
 /**
@@ -361,7 +400,7 @@ export default (scene) => {
   const currentLon = 119;
   const currentLat = 29;
 
-  const cPoint = getShowPointByLonLat(currentLon, currentLat, earthSize);
+  const cPoint = getShowPointByLonLat(currentLon, currentLat, earthSize, 1);
   scene.add(cPoint);
 
   for (let i = 0; i < 20; i++) {
