@@ -44,7 +44,7 @@ const genArcInfo = (p1, p2) => {
 
   // 计算角度
   const angle = startPosition.angleTo(endPosition);
-  const centerRadiusPositionY = length + angle / 0.6;
+  const centerRadiusPositionY = length + angle / 0.2;
   const centerRadiusPosition = new THREE.Vector3(0, centerRadiusPositionY, 0);
 
   // 计算圆心
@@ -175,7 +175,7 @@ const getFlyLineMesh = (arcInfo) => {
   return flyEllipse;
 };
 
-function calculateCircleCenterAndRadius (p1, p2, p3) {
+function calculateCircleCenterAndRadius(p1, p2, p3) {
   const L1 = p1.lengthSq(); //p1到坐标原点距离的平方
   const L2 = p2.lengthSq();
   const L3 = p3.lengthSq();
@@ -206,32 +206,96 @@ const getEarth = (earthSize) => {
   // 地球贴图
   const textureLoader = new THREE.TextureLoader();
   const texture = textureLoader.load(
-    './assets/world.png'
+    './assets/earth.jpg'
     // './assets/earth.jpg'
   );
   // 球
   const geometry = new THREE.SphereGeometry(coreRadius, 32, 32);
   const material = new THREE.MeshBasicMaterial({
-    color: 0x888888,
-    map: texture,
+    // map: texture,
+    color: 0x000000,
   });
   const sphere = new THREE.Mesh(geometry, material);
+
+  // 表面线条
+  new THREE.FileLoader().load('./assets/world.json', (data) => {
+    const json = JSON.parse(data);
+
+    // console.log('json.features', );
+    json.features.forEach(feature => {
+      const geometry = feature.geometry;
+      let coordinates = [];
+      if (geometry.type === 'Polygon') {
+        // - 
+        coordinates = [geometry.coordinates];
+      } else if (geometry.type === 'MultiPolygon') {
+        // -
+        coordinates = geometry.coordinates;
+      }
+      coordinates.forEach(polygons => {
+        polygons.forEach(polygon => {
+          const points = polygon.map((point) => {
+            // // 经纬度转2d坐标
+            const [x, y] = [point[0], point[1]];
+            const v3 = latLonToVector3(x, y, coreRadius);
+            return v3;
+          });
+          const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+          const lineMaterial = new THREE.LineBasicMaterial({ color: 0xff0000, });
+          const line = new THREE.LineLoop(lineGeometry, lineMaterial);
+
+          sphere.add(line);
+        });
+      });
+    });
+  });
+
+  // 球体光晕
+  const glowGeometry = new THREE.SphereGeometry(coreRadius + 1, 32, 32);
+  const glowMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff0000,
+    side: THREE.BackSide,
+    transparent: true,
+    opacity: 0.2,
+  });
+  const glowSphere = new THREE.Mesh(glowGeometry, glowMaterial);
+  sphere.add(glowSphere);
+
 
   return sphere;
 }
 
 // 经纬度转换为3D坐标
-function latLonToVector3 (lat, lon, radius) {
+function latLonToVector3(longitude, latitude, R) {
   // 将经纬度转换为弧度
-  const phi = (90 - lat) * Math.PI / 180;
-  const theta = (lon + 180) * Math.PI / 180;
+  let lon = (longitude * Math.PI) / 180; //转弧度值
+  let lat = (latitude * Math.PI) / 180; //转弧度值
+  lon = -lon; // three.js坐标系z坐标轴对应经度-90度，而不是90度
 
-  // 计算球面上的点的坐标
-  const x = -(radius * Math.sin(phi) * Math.cos(theta));
-  const y = radius * Math.cos(phi);
-  const z = radius * Math.sin(phi) * Math.sin(theta);
-
+  // 经纬度坐标转球面坐标计算公式
+  const x = R * Math.cos(lat) * Math.cos(lon);
+  const y = R * Math.sin(lat);
+  const z = R * Math.cos(lat) * Math.sin(lon);
   return new THREE.Vector3(x, y, z);
+}
+
+const getBackground = (redis) => {
+  // 加载材质
+  const textureLoader = new THREE.TextureLoader();
+  const texture = textureLoader.load(
+    './assets/bg.png'
+  );
+  // 创建精灵
+  const spriteMaterial = new THREE.SpriteMaterial({
+    map: texture,
+    color: 0xffffff,
+    transparent: true,
+  });
+  const sprite = new THREE.Sprite(spriteMaterial);
+  sprite.scale.set(redis * 3, redis * 3, 0);
+
+  return sprite;
+
 }
 
 /**
@@ -239,19 +303,22 @@ function latLonToVector3 (lat, lon, radius) {
  */
 export default (scene) => {
 
-  const earthSize = 100;
+  const earthSize = 98;
+
+  // 背景
+  const bg = getBackground(earthSize);
+  scene.add(bg);
 
   const earth = getEarth(earthSize);
-
   // earth.rotation.y = Math.PI / 180 * 165;
   // earth.rotation.x = Math.PI / 180 * 25;
 
   scene.add(earth);
   // 当前经纬度
-  const currentLat = 30;
-  const currentLon = 120;
+  const currentLon = 119;
+  const currentLat = 29;
 
-  const locationPosition = latLonToVector3(currentLat, currentLon, earthSize)
+  const locationPosition = latLonToVector3(currentLon, currentLat, earthSize)
 
 
   // 创建点
@@ -293,7 +360,7 @@ export default (scene) => {
   // const sceneQ = new THREE.Quaternion().setFromUnitVectors( new THREE.Vector3(0, 0, 1), locationPosition.clone().normalize());
   // cone.applyQuaternion(sceneQ);
   // cone.position.applyQuaternion(sceneQ);
-  cone.quaternion.setFromUnitVectors( new THREE.Vector3(0, 1, 0), locationPosition.clone().normalize());
+  cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), locationPosition.clone().normalize());
 
   for (let i = 0; i < 100; i++) {
     const p1 = createPoint(0.3, 0x0000ff);
@@ -332,7 +399,7 @@ export default (scene) => {
 
 
     // -
-    
+
 
     // TWEEN start=originQuaternion end=qqq  loop
     const tween = new TWEEN.Tween(flyEllipse.rotation)
