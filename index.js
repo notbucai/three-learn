@@ -57,10 +57,10 @@ var params = {
     const dataURL = canvas.toDataURL('image/png');
 
     const downloadLink = document.createElement('a');
-    
+
     downloadLink.href = dataURL;
     downloadLink.download = 'world.png';
-    
+
   }
 };
 
@@ -90,15 +90,17 @@ function init () {
   controls.minDistance = 50;
   controls.maxDistance = 10000;
 
-  // scene.add(new THREE.AmbientLight(0x443333));
+  scene.add(new THREE.AmbientLight(0x443333));
 
-  // var light = new THREE.DirectionalLight(0xffddcc, 1);
-  // light.position.set(1, 0.75, 0.5);
-  // scene.add(light);
 
-  // var light = new THREE.DirectionalLight(0xccccff, 1);
-  // light.position.set(- 1, 0.75, - 0.5);
-  // scene.add(light);
+  var light = new THREE.DirectionalLight(0x88ffff, 0.5);
+  light.position.set(60, 120, -100);
+  light.lookAt(new THREE.Vector3());
+  light.add(new THREE.AxesHelper(10));
+  const helper = new THREE.DirectionalLightHelper( light, 5 );
+  scene.add( helper );
+  scene.add(light);
+
 
   // var geometry = new THREE.BufferGeometry();
   // geometry.setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);

@@ -206,29 +206,30 @@ const getEarth = (earthSize) => {
   // 地球贴图
   const textureLoader = new THREE.TextureLoader();
   const texture = textureLoader.load(
-    './assets/world.png'
+    "./assets/world.png"
     // './assets/earth.jpg'
   );
   // 球
   const geometry = new THREE.SphereGeometry(coreRadius, 32, 32);
-  const material = new THREE.MeshBasicMaterial({
+  const material = new THREE.MeshPhongMaterial({
     map: texture,
-    // color: 0x005959,
+    // normalMap: texture,
+    // color: 0x777777,
   });
   const sphere = new THREE.Mesh(geometry, material);
 
   // 表面线条
-  new THREE.FileLoader().load('./assets/world.json', (data) => {
+  new THREE.FileLoader().load("./assets/countries.geo.json", (data) => {
     const json = JSON.parse(data);
 
     // console.log('json.features', );
     const featurePoints = json.features.reduce((pv, feature) => {
       const geometry = feature.geometry;
       let coordinates = [];
-      if (geometry.type === 'Polygon') {
-        // - 
+      if (geometry.type === "Polygon") {
+        // -
         coordinates = [geometry.coordinates];
-      } else if (geometry.type === 'MultiPolygon') {
+      } else if (geometry.type === "MultiPolygon") {
         // -
         coordinates = geometry.coordinates;
       }
@@ -253,28 +254,31 @@ const getEarth = (earthSize) => {
       return pv.concat(rootPoints);
     }, []);
 
-
-    const lineGeometry = new THREE.BufferGeometry().setFromPoints(featurePoints);
-    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x81f2e1, linewidth: 1 });
+    const lineGeometry = new THREE.BufferGeometry().setFromPoints(
+      featurePoints
+    );
+    const lineMaterial = new THREE.LineBasicMaterial({
+      color: 0x81f2e1,
+      linewidth: 1,
+    });
     const line = new THREE.LineSegments(lineGeometry, lineMaterial);
 
     sphere.add(line);
   });
 
   // 球体光晕
-  const glowGeometry = new THREE.SphereGeometry(coreRadius + 1, 64, 64);
-  const glowMaterial = new THREE.MeshBasicMaterial({
-    color: 0x81f2e1,
-    side: THREE.BackSide,
+  const glowGeometry = new THREE.SphereGeometry(coreRadius + 2, 64, 64);
+  const glowMaterial = new THREE.MeshLambertMaterial({
+    color: 0xffffff,
+    side: THREE.FrontSide,
     transparent: true,
-    opacity: 0.2,
+    opacity: 0.1,
   });
   const glowSphere = new THREE.Mesh(glowGeometry, glowMaterial);
   sphere.add(glowSphere);
 
-
   return sphere;
-}
+};
 
 // 经纬度转换为3D坐标
 function latLonToVector3(longitude, latitude, R) {
@@ -293,9 +297,7 @@ function latLonToVector3(longitude, latitude, R) {
 const getBackground = (redis) => {
   // 加载材质
   const textureLoader = new THREE.TextureLoader();
-  const texture = textureLoader.load(
-    './assets/bg.png'
-  );
+  const texture = textureLoader.load("./assets/bg.png");
   // 创建精灵
   const spriteMaterial = new THREE.SpriteMaterial({
     map: texture,
@@ -305,15 +307,17 @@ const getBackground = (redis) => {
   sprite.scale.set(redis * 3, redis * 3, 0);
 
   return sprite;
+};
 
-}
-
-const getShowPoint = (position, size = 0.5) => {
+const getShowPoint = (position, val, size = 0.5) => {
   const gapSize = size * 0.2;
 
   const group = new THREE.Group();
   group.position.copy(position);
-  group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), position.clone().normalize());
+  group.quaternion.setFromUnitVectors(
+    new THREE.Vector3(0, 1, 0),
+    position.clone().normalize()
+  );
 
   // 创建外环
   const outRingGeometry = new THREE.RingGeometry(size - gapSize, size, 20);
@@ -338,7 +342,11 @@ const getShowPoint = (position, size = 0.5) => {
   const rippleRingList = [];
   for (let i = 0; i < 3; i++) {
     // 涟漪
-    const rippleRingGeometry = new THREE.RingGeometry(size + (gapSize * i) , size + gapSize * i * 1.4, 20);
+    const rippleRingGeometry = new THREE.RingGeometry(
+      size + gapSize * i,
+      size + gapSize * i * 1.6,
+      20
+    );
     const rippleRingMaterial = new THREE.MeshBasicMaterial({
       color: 0x81f2e1,
       side: THREE.DoubleSide,
@@ -350,17 +358,32 @@ const getShowPoint = (position, size = 0.5) => {
 
     rippleRingList.push(rippleRing);
   }
-
   // 旋转角度
   group.add(...rippleRingList);
+
+  const baseLineSize = val * size;
+  console.log('baseLineSize', baseLineSize, val, size);
+  // 创建线条
+  const lineGeometry = new THREE.BufferGeometry();
+  lineGeometry.setFromPoints([
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(0, baseLineSize, 0),
+  ]);
+  const lineMaterial = new THREE.LineBasicMaterial({
+    color: 0x81f2e1,
+    linewidth: 1,
+  });
+  const line = new THREE.Line(lineGeometry, lineMaterial);
+  group.add(line);
 
   new TWEEN.Tween({
     scale: 1,
     opacity: 0.8,
-  }).to({
-    scale: 2,
-    opacity: 0,
   })
+    .to({
+      scale: 2,
+      opacity: 0,
+    })
     .onUpdate((obj) => {
       rippleRingList.forEach((rippleRing, index) => {
         rippleRing.scale.setScalar(obj.scale - index * 0.1);
@@ -373,18 +396,17 @@ const getShowPoint = (position, size = 0.5) => {
     .start();
 
   return group;
-}
+};
 
-const getShowPointByLonLat = (lon, lat, r, size = 0.5) => {
+const getShowPointByLonLat = (lon, lat, r, val, size = 0.5) => {
   const position = latLonToVector3(lon, lat, r);
-  return getShowPoint(position, size);
-}
+  return getShowPoint(position, val, size);
+};
 
 /**
  * @param {THREE.Scene} scene
  */
 export default (scene) => {
-
   const earthSize = 100;
 
   // 背景
@@ -400,10 +422,10 @@ export default (scene) => {
   const currentLon = 119;
   const currentLat = 29;
 
-  const cPoint = getShowPointByLonLat(currentLon, currentLat, earthSize, 1);
+  const cPoint = getShowPointByLonLat(currentLon, currentLat, earthSize, 10,1);
   scene.add(cPoint);
 
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 140; i++) {
     // 随机放在球面上 xyz
     // 随机一个向量
     const randomPoint1 = new THREE.Vector3(
@@ -422,12 +444,11 @@ export default (scene) => {
     // 乘以半径
     randomPoint2.normalize().multiplyScalar(earthSize);
 
-    const p1 = getShowPoint(randomPoint1);
-    const p2 = getShowPoint(randomPoint2);
-
+    const p1 = getShowPoint(randomPoint1, Math.random() * 100);
+    const p2 = getShowPoint(cPoint.position.clone(), 0);
 
     scene.add(p1);
-    scene.add(p2);
+    // scene.add(p2);
 
     // 两点长度
     const distance = p1.position.distanceTo(p2.position);
@@ -438,7 +459,6 @@ export default (scene) => {
 
     scene.add(flyEllipse);
     scene.add(arcMesh);
-
 
     // -
     // console.log('distance', );
@@ -456,5 +476,4 @@ export default (scene) => {
       .repeat(Infinity)
       .start();
   }
-
 };
