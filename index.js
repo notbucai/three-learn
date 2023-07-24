@@ -94,11 +94,11 @@ function init () {
 
 
   var light = new THREE.DirectionalLight(0x88ffff, 0.5);
-  light.position.set(60, 120, -100);
+  light.position.set(-70, 140, -120);
   light.lookAt(new THREE.Vector3());
   light.add(new THREE.AxesHelper(10));
-  const helper = new THREE.DirectionalLightHelper( light, 5 );
-  scene.add( helper );
+  // const helper = new THREE.DirectionalLightHelper( light, 5 );
+  // scene.add( helper );
   scene.add(light);
 
 
