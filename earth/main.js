@@ -9,7 +9,6 @@ import { calcArcInfo } from "./lib/utils.js";
 import { getArcMesh, getFlyLineMesh } from "./lib/fly.js";
 import { getShowPointByLonLat } from "./lib/point.js";
 
-
 export default class Earth {
   constructor(
     {
@@ -96,28 +95,27 @@ export default class Earth {
     const corePoint = getShowPointByLonLat(currentLon, currentLat, size, 0, 1);
     earthGroup.add(corePoint);
 
-    for (let i = 0; i < originLocationList.length; i++) {
-
-      const location = originLocationList[i];
-      const originPoint = getShowPointByLonLat(location.lon, location.lat, size, location.count, 1);
+    const points = originLocationList.map(location => {
+      const originPoint = getShowPointByLonLat(location.lon, location.lat, size, location.count, 0.6);
       if (!originPoint) {
-        continue;
+        return;
       }
       const targetPoint = corePoint.clone();
       // 两点长度
       const distance = originPoint.position.distanceTo(targetPoint.position);
       // 如果小于1 就忽略
       if (distance < 4) {
-        continue;
+        return;
       }
       // 核心
       const arcInfo = calcArcInfo(originPoint.position, targetPoint.position);
       const arcMesh = getArcMesh(arcInfo);
       const flyEllipse = getFlyLineMesh(arcInfo);
 
-      earthGroup.add(originPoint);
-      earthGroup.add(flyEllipse);
-      earthGroup.add(arcMesh);
+      const group = new THREE.Group();
+      group.add(originPoint);
+      group.add(flyEllipse);
+      group.add(arcMesh);
 
       new TWEEN.Tween(flyEllipse.rotation)
         .to(
@@ -130,6 +128,11 @@ export default class Earth {
         .delay(100)
         .repeat(Infinity)
         .start();
-    }
+
+      return group;
+    }).filter(item => item);
+
+    earthGroup.add(...points);
+
   }
 }

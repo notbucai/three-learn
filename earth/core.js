@@ -11,9 +11,6 @@ export default () => {
   const earthSize = 100;
 
   const earth = createEarth(earthSize);
-  // earth.rotation.y = Math.PI / 180 * 165;
-  // earth.rotation.x = Math.PI / 180 * 25;
-
   earthGroup.add(earth);
   // 当前经纬度
   const currentLon = 119;
