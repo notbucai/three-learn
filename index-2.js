@@ -71,7 +71,7 @@ function init () {
 
   renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, });
   // renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(1024, 1024 / 2);
+  renderer.setSize(2048, 2048 / 2);
   container.appendChild(renderer.domElement);
 
   stats = new Stats();
